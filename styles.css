@@ -1,0 +1,950 @@
+/* ── Reset & Base ──────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg0: #1a1a1a;
+  --bg1: #222222;
+  --bg2: #2a2a2a;
+  --bg3: #333333;
+  --bg4: #3a3a3a;
+  --border: #444444;
+  --text0: #e0e0e0;
+  --text1: #aaaaaa;
+  --text2: #666666;
+  --accent: #e8a020;
+  --accent2: #4a9eff;
+  --danger: #e05050;
+  --green: #50c878;
+
+  --ruler-h: 28px;
+  --track-h: 64px;
+  --auto-h: 48px;
+  --track-gap: 2px;
+  --track-total: calc(var(--track-h) + var(--auto-h) + var(--track-gap));
+  --left-w: 180px;
+  --transport-h: 44px;
+  --status-h: 24px;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg0);
+  color: var(--text0);
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 12px;
+}
+
+/* ── App Layout ────────────────────────────────────────────── */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* ── Transport Bar ─────────────────────────────────────────── */
+#transport-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--transport-h);
+  background: var(--bg1);
+  border-bottom: 1px solid var(--border);
+  padding: 0 12px;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.transport-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.transport-center {
+  flex: 1;
+  justify-content: center;
+}
+
+button {
+  background: var(--bg3);
+  color: var(--text0);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  transition: background 0.1s;
+}
+button:hover {
+  background: var(--bg4);
+}
+button:active {
+  background: var(--accent);
+  color: #000;
+}
+
+.play-btn {
+  min-width: 36px;
+  font-size: 14px;
+}
+.play-btn.playing {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+#btn-stop {
+  min-width: 32px;
+}
+
+#btn-undo,
+#btn-redo {
+  min-width: 30px;
+  font-size: 13px;
+}
+#btn-undo:disabled,
+#btn-redo:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+#btn-undo:disabled:hover,
+#btn-redo:disabled:hover {
+  background: var(--bg3);
+}
+
+.transport-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  margin: 0 2px;
+}
+
+#btn-tap-bpm {
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  padding: 4px 8px;
+  color: var(--accent2);
+  border-color: var(--accent2);
+}
+#btn-tap-bpm:hover {
+  background: var(--accent2);
+  color: #000;
+}
+#btn-tap-bpm.tapping {
+  background: var(--accent2);
+  color: #000;
+}
+
+.snap-btn {
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  padding: 4px 8px;
+  min-width: 76px;
+  color: var(--text2);
+  border-color: var(--border);
+}
+.snap-btn.beat {
+  color: var(--green);
+  border-color: var(--green);
+}
+.snap-btn.bar {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.metro-btn {
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  padding: 4px 8px;
+  min-width: 82px;
+  color: var(--text2);
+  border-color: var(--border);
+}
+.metro-btn.metro-on {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(232, 160, 32, 0.12);
+}
+
+.time-display {
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--accent);
+  letter-spacing: 2px;
+  min-width: 80px;
+  text-align: center;
+}
+
+.bpm-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text1);
+}
+.bpm-label input {
+  width: 60px;
+  background: var(--bg3);
+  color: var(--accent);
+  border: 1px solid var(--border);
+  padding: 3px 6px;
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: 13px;
+  text-align: center;
+}
+.bpm-label input:focus {
+  outline: 1px solid var(--accent);
+}
+
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+#zoom-display {
+  min-width: 32px;
+  text-align: center;
+  color: var(--text1);
+}
+
+/* ── Main Area ─────────────────────────────────────────────── */
+#main-area {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ── Track Controls (Left Panel) ───────────────────────────── */
+#track-controls {
+  width: var(--left-w);
+  flex-shrink: 0;
+  background: var(--bg1);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#track-controls-header {
+  height: var(--ruler-h);
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  color: var(--text2);
+  font-size: 10px;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+}
+
+#track-controls-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+#track-controls-body::-webkit-scrollbar {
+  width: 6px;
+}
+#track-controls-body::-webkit-scrollbar-track {
+  background: var(--bg1);
+}
+#track-controls-body::-webkit-scrollbar-thumb {
+  background: var(--bg4);
+  border-radius: 3px;
+}
+
+/* ── Single Track Control Strip ────────────────────────────── */
+.track-strip {
+  border-bottom: 1px solid var(--border);
+}
+
+.track-strip-main {
+  height: var(--track-h);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 6px 8px;
+  background: var(--bg2);
+  cursor: default;
+}
+.track-strip-main:hover {
+  background: var(--bg3);
+}
+
+.track-strip-name {
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text0);
+}
+
+.track-bpm-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--text2);
+}
+
+.track-bpm-input {
+  width: 44px;
+  background: var(--bg3);
+  color: var(--accent);
+  border: 1px solid transparent;
+  border-radius: 2px;
+  padding: 1px 4px;
+  font-family: inherit;
+  font-size: 10px;
+  text-align: center;
+}
+.track-bpm-input:hover {
+  border-color: var(--border);
+}
+.track-bpm-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--bg4);
+}
+
+.track-strip-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.track-volume-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  height: 4px;
+  background: var(--bg4);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+.track-volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+}
+
+.btn-mute,
+.btn-delete {
+  padding: 2px 5px;
+  font-size: 10px;
+  min-width: unset;
+}
+.btn-mute.muted {
+  background: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
+}
+.btn-delete {
+  color: var(--danger);
+  border-color: transparent;
+  background: transparent;
+}
+.btn-delete:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+.track-strip-automation {
+  height: var(--auto-h);
+  background: var(--bg1);
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  gap: 6px;
+  color: var(--text2);
+  font-size: 10px;
+  letter-spacing: 0.5px;
+}
+.auto-mode-toggle {
+  font-size: 9px;
+  padding: 1px 4px;
+  color: var(--text2);
+  border-color: var(--border);
+}
+.auto-mode-toggle.active {
+  color: var(--accent2);
+  border-color: var(--accent2);
+}
+
+/* ── Timeline Scroll Wrapper ───────────────────────────────── */
+#timeline-scroll-wrapper {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: auto;
+  background: var(--bg0);
+  position: relative;
+}
+#timeline-scroll-wrapper::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+#timeline-scroll-wrapper::-webkit-scrollbar-track {
+  background: var(--bg1);
+}
+#timeline-scroll-wrapper::-webkit-scrollbar-thumb {
+  background: var(--bg4);
+  border-radius: 4px;
+}
+
+#timeline-canvas {
+  display: block;
+  cursor: crosshair;
+}
+
+/* ── Status Bar ────────────────────────────────────────────── */
+#status-bar {
+  height: var(--status-h);
+  background: var(--bg1);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+#status-text {
+  flex: 1;
+  color: var(--text2);
+  font-size: 11px;
+}
+
+.badge {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 2px;
+  letter-spacing: 1px;
+}
+#opfs-indicator {
+  background: var(--bg3);
+  color: var(--text2);
+  border: 1px solid var(--border);
+}
+#opfs-indicator.available {
+  color: var(--green);
+  border-color: var(--green);
+}
+
+/* ── Track strip tap button ────────────────────────────────── */
+.btn-tap-track {
+  font-size: 9px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  padding: 1px 5px;
+  color: var(--accent2);
+  border-color: var(--accent2);
+  flex-shrink: 0;
+}
+.btn-tap-track:hover {
+  background: var(--accent2);
+  color: #000;
+}
+
+.track-dur {
+  color: var(--text2);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+/* ── Tap BPM Modal ─────────────────────────────────────────── */
+#bpm-tap-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+}
+#bpm-tap-modal.hidden {
+  display: none;
+}
+
+.bpm-tap-panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 24px 24px;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+}
+
+.bpm-tap-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.bpm-tap-title {
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: var(--text2);
+  flex-shrink: 0;
+}
+.bpm-tap-trackname {
+  font-size: 12px;
+  color: var(--text0);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bpm-tap-close {
+  background: none;
+  border: none;
+  color: var(--text2);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 2px;
+  flex-shrink: 0;
+}
+.bpm-tap-close:hover {
+  color: var(--text0);
+  background: none;
+}
+
+/* The big tap zone */
+.bpm-tap-zone {
+  width: 100%;
+  height: 110px;
+  background: var(--bg3);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  gap: 2px;
+  transition:
+    background 0.06s,
+    border-color 0.06s;
+  user-select: none;
+}
+.bpm-tap-zone:hover {
+  border-color: var(--accent2);
+  background: var(--bg4);
+}
+.bpm-tap-zone:active {
+  background: #1a2a3a;
+  border-color: var(--accent2);
+}
+
+.bpm-tap-value {
+  font-size: 48px;
+  font-weight: bold;
+  color: var(--accent);
+  line-height: 1;
+  letter-spacing: -1px;
+  pointer-events: none;
+}
+.bpm-tap-unit {
+  font-size: 12px;
+  color: var(--text2);
+  letter-spacing: 2px;
+  pointer-events: none;
+}
+
+.bpm-tap-hint {
+  font-size: 11px;
+  color: var(--text2);
+  text-align: center;
+}
+
+/* Confidence bar */
+.bpm-tap-confidence-bar {
+  height: 4px;
+  background: var(--bg4);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.bpm-tap-confidence-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--accent2);
+  border-radius: 2px;
+  transition: width 0.2s;
+}
+.bpm-tap-confidence-label {
+  font-size: 10px;
+  color: var(--text2);
+  text-align: center;
+  margin-top: -6px;
+}
+
+/* Half / Double variant buttons */
+.bpm-tap-variants {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+.bpm-variant-btn {
+  flex: 1;
+  padding: 6px 4px;
+  font-size: 11px;
+  color: var(--text1);
+  border-color: var(--border);
+  text-align: center;
+  border-radius: 4px;
+}
+.bpm-variant-btn strong {
+  display: block;
+  font-size: 15px;
+  color: var(--text0);
+}
+.bpm-variant-btn.current {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.bpm-variant-btn.current strong {
+  color: var(--accent);
+}
+.bpm-variant-btn:hover {
+  background: var(--bg4);
+  border-color: var(--accent2);
+}
+
+/* Actions row */
+.bpm-tap-actions {
+  display: flex;
+  gap: 8px;
+}
+.bpm-tap-reset {
+  flex: 1;
+  color: var(--text2);
+}
+.bpm-tap-apply {
+  flex: 2;
+  background: var(--accent2);
+  color: #000;
+  border-color: var(--accent2);
+  font-weight: bold;
+}
+.bpm-tap-apply:disabled {
+  background: var(--bg3);
+  color: var(--text2);
+  border-color: var(--border);
+  font-weight: normal;
+  cursor: default;
+}
+.bpm-tap-apply:not(:disabled):hover {
+  background: #6ab8ff;
+}
+
+/* ── Overlay / Loading ─────────────────────────────────────── */
+#loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  color: var(--text0);
+  font-size: 14px;
+  gap: 12px;
+}
+#loading-overlay.hidden {
+  display: none;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Drop Overlay ──────────────────────────────────────────── */
+#drop-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  border: 3px dashed var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+  pointer-events: none;
+}
+#drop-overlay.hidden {
+  display: none;
+}
+
+.drop-label {
+  font-size: 22px;
+  color: var(--accent);
+  letter-spacing: 2px;
+  text-shadow: 0 0 20px rgba(232, 160, 32, 0.5);
+}
+
+/* ── Beat Grid button ──────────────────────────────────────── */
+.btn-beat-grid {
+  font-size: 9px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  padding: 1px 5px;
+  color: var(--green);
+  border-color: var(--green);
+  flex-shrink: 0;
+}
+.btn-beat-grid:hover {
+  background: var(--green);
+  color: #000;
+}
+
+/* ── Beat Grid Modal ───────────────────────────────────────── */
+#beat-grid-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 600;
+}
+#beat-grid-modal.hidden {
+  display: none;
+}
+
+.bgm-panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px 20px 20px;
+  width: min(860px, 96vw);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.7);
+}
+
+.bgm-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.bgm-title {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  color: var(--text2);
+  flex-shrink: 0;
+}
+.bgm-trackname {
+  font-size: 13px;
+  color: var(--text0);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bgm-close {
+  background: none;
+  border: none;
+  color: var(--text2);
+  font-size: 15px;
+  cursor: pointer;
+  padding: 0 2px;
+}
+.bgm-close:hover {
+  color: var(--text0);
+  background: none;
+}
+
+.bgm-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.bgm-ctrl-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text1);
+}
+.bgm-ctrl-group input {
+  width: 68px;
+  background: var(--bg3);
+  color: var(--accent);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 3px 6px;
+  font-family: inherit;
+  font-size: 12px;
+  text-align: center;
+}
+.bgm-ctrl-group input:focus {
+  outline: 1px solid var(--accent);
+}
+.bgm-nudge-group {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+.bgm-nudge {
+  font-size: 11px;
+  padding: 3px 8px;
+  color: var(--accent2);
+  border-color: var(--accent2);
+}
+.bgm-nudge:hover {
+  background: var(--accent2);
+  color: #000;
+}
+
+.bgm-canvas-wrapper {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  background: #111;
+  cursor: crosshair;
+}
+.bgm-canvas {
+  display: block;
+  width: 100%;
+}
+
+.bgm-zoom-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.bgm-zoom-out,
+.bgm-zoom-in {
+  font-size: 14px;
+  padding: 2px 8px;
+  min-width: 28px;
+}
+.bgm-zoom-label {
+  font-size: 10px;
+  color: var(--text2);
+}
+.bgm-hint-text {
+  font-size: 10px;
+  color: var(--text2);
+  flex: 1;
+  text-align: right;
+}
+
+.bgm-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bgm-preview-btn {
+  color: var(--accent);
+  border-color: var(--accent);
+  font-weight: bold;
+  padding: 4px 14px;
+}
+.bgm-preview-btn:hover {
+  background: var(--accent);
+  color: #000;
+}
+.bgm-metro-btn {
+  color: var(--text2);
+  border-color: var(--border);
+  padding: 4px 10px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+.bgm-metro-btn.metro-on {
+  color: var(--accent2);
+  border-color: var(--accent2);
+}
+.bgm-cancel {
+  color: var(--text2);
+}
+.bgm-apply {
+  background: var(--accent2);
+  color: #000;
+  border-color: var(--accent2);
+  font-weight: bold;
+  padding: 4px 18px;
+}
+.bgm-apply:hover {
+  background: #6ab8ff;
+}
+
+/* ── BPM Automation Strip (left panel) ────────────────────── */
+.bpm-auto-strip {
+  height: 56px; /* must match BPM_H in timeline.js */
+  background: #1a1a28;
+  border-top: 2px solid #111;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  flex-shrink: 0;
+}
+
+.bpm-auto-label {
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  color: rgba(232, 160, 32, 0.6);
+}
+
+/* ── Context Menu ──────────────────────────────────────────── */
+#context-menu {
+  position: fixed;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 0;
+  z-index: 200;
+  min-width: 140px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+#context-menu.hidden {
+  display: none;
+}
+
+.ctx-item {
+  padding: 6px 14px;
+  cursor: pointer;
+  color: var(--text0);
+  font-size: 12px;
+}
+.ctx-item:hover {
+  background: var(--bg4);
+}
+.ctx-item.danger {
+  color: var(--danger);
+}
+.ctx-separator {
+  height: 1px;
+  background: var(--border);
+  margin: 3px 0;
+}
