@@ -52,7 +52,6 @@ const zoomDisplay = $("zoom-display");
 const statusText = $("status-text");
 const opfsIndicator = $("opfs-indicator");
 const trackControlsBody = $("track-controls-body");
-const timelineCanvas = $("timeline-canvas");
 const scrollWrapper = $("timeline-scroll-wrapper");
 
 // Drop overlay — created lazily
@@ -401,9 +400,10 @@ async function init() {
   Metronome.setGetBPM(() => state.masterBPM);
   Metronome.setVolume(0.6);
 
-  Timeline.init(timelineCanvas, state, {
+  Timeline.init(scrollWrapper, state, {
     onSeek: handleSeek,
     onTrackMove: handleTrackMove,
+    onTrackMoveEnd: clearMoveFlag,
     onAutomationEdit: handleAutomationEdit,
     onBpmAutomationEdit: handleBpmAutomationEdit,
   });
