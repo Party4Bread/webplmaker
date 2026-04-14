@@ -176,6 +176,12 @@ button:active {
   border-color: var(--accent);
   background: rgba(232, 160, 32, 0.12);
 }
+.metro-vol-slider {
+  width: 60px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  vertical-align: middle;
+}
 
 .time-display {
   font-size: 16px;

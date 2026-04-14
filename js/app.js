@@ -42,6 +42,7 @@ const btnRedo = $("btn-redo");
 const btnTapBpm = $("btn-tap-bpm");
 const btnSnap = $("btn-snap");
 const btnMetro = $("btn-metro");
+const metroVolume = $("metro-volume");
 const btnZoomIn = $("btn-zoom-in");
 const btnZoomOut = $("btn-zoom-out");
 const btnZoomFit = $("btn-zoom-fit");
@@ -425,6 +426,7 @@ async function init() {
   btnTapBpm.addEventListener("click", handleTapBpm);
   btnSnap.addEventListener("click", cycleSnap);
   btnMetro?.addEventListener("click", toggleMetronome);
+  metroVolume?.addEventListener("input", () => Metronome.setVolume(parseFloat(metroVolume.value)));
   btnZoomIn.addEventListener("click", () => zoom(1.4));
   btnZoomOut.addEventListener("click", () => zoom(1 / 1.4));
   btnZoomFit.addEventListener("click", zoomFit);
