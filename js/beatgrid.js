@@ -39,6 +39,7 @@ let _prevStopTimer = null; // explicit stop timer — never rely on src.onended
 
 // Metronome state
 let _metroOn = true;
+let _metroVol = 0.6; // mirrors global metro volume
 let _metroTimer = null;
 let _metroNextBeat = 0;
 let _metroBeatCount = 0;
@@ -79,6 +80,10 @@ export function close() {
   _stopPreview();
   _stopLoop();
   if (_el) _el.classList.add("hidden");
+}
+
+export function setMetroVolume(vol) {
+  _metroVol = vol;
 }
 
 // ── DOM Construction ──────────────────────────────────────────
@@ -448,7 +453,7 @@ function _metroTick() {
 
 function _metroClick(time, accent) {
   const c = _audioCtx;
-  const vol = 0.6 * (accent ? 1.0 : 0.55);
+  const vol = _metroVol * (accent ? 1.0 : 0.55);
   _metroOsc(c, accent ? 1100 : 800, vol * 0.6, time, accent ? 0.045 : 0.03);
   _metroOsc(c, accent ? 550 : 400, vol * 0.4, time, accent ? 0.032 : 0.021);
   _metroNoise(c, vol * 0.25, time, 0.008);
@@ -520,15 +525,17 @@ function _startPreview() {
   gain.connect(_audioCtx.destination);
   // Do NOT use src.onended — it fires asynchronously after stop() and can
   // cancel the metronome of a subsequently started preview.
-  src.start(_audioCtx.currentTime, startSec, duration);
+  // Capture currentTime once so src.start() and _prevStartCtx are in sync.
+  const startAt = _audioCtx.currentTime;
+  src.start(startAt, startSec, duration);
 
   _prevSrc = src;
   _prevGain = gain;
-  _prevStartCtx = _audioCtx.currentTime;
+  _prevStartCtx = startAt;
   _prevStartTrack = startSec;
   _prevPlaying = true;
+  _startMetro(); // call BEFORE DOM updates — keeps elapsed ≈ 0 in _startMetro
   _updatePreviewBtn();
-  _startMetro();
 
   // Stop after duration using a plain JS timer (immune to audio race conditions)
   _prevStopTimer = setTimeout(_stopPreview, duration * 1000 + 150);

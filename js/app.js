@@ -461,6 +461,7 @@ async function init() {
 
   Metronome.setGetBPM(() => state.masterBPM);
   Metronome.setVolume(0.6);
+  BeatGrid.setMetroVolume(0.6);
 
   Timeline.init(scrollWrapper, state, {
     onSeek: handleSeek,
@@ -487,7 +488,11 @@ async function init() {
   btnTapBpm.addEventListener("click", handleTapBpm);
   btnSnap.addEventListener("click", cycleSnap);
   btnMetro?.addEventListener("click", toggleMetronome);
-  metroVolume?.addEventListener("input", () => Metronome.setVolume(parseFloat(metroVolume.value)));
+  metroVolume?.addEventListener("input", () => {
+    const vol = parseFloat(metroVolume.value);
+    Metronome.setVolume(vol);
+    BeatGrid.setMetroVolume(vol);
+  });
   btnZoomIn.addEventListener("click", () => zoom(1.4));
   btnZoomOut.addEventListener("click", () => zoom(1 / 1.4));
   btnZoomFit.addEventListener("click", zoomFit);
