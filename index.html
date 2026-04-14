@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebPL Maker — DJ Set Planner</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <!-- Transport Bar -->
+      <header id="transport-bar">
+        <div class="transport-section transport-left">
+          <button id="btn-import" title="Import audio files (stored in OPFS)">＋ Import</button>
+          <input type="file" id="file-input" accept="audio/*" multiple hidden />
+          <button id="btn-save" title="Save project">💾</button>
+        </div>
+
+        <div class="transport-section transport-center">
+          <button id="btn-undo" title="Undo (Ctrl+Z)" disabled>↩</button>
+          <button id="btn-redo" title="Redo (Ctrl+Y)" disabled>↪</button>
+          <div class="transport-sep"></div>
+          <button id="btn-stop" title="Stop and rewind">⏹</button>
+          <button id="btn-play" title="Play / Pause" class="play-btn">▶</button>
+          <span id="playhead-display" class="time-display">00:00.0</span>
+        </div>
+
+        <div class="transport-section transport-right">
+          <label class="bpm-label">
+            BPM
+            <input id="master-bpm" type="number" min="40" max="300" value="120" step="0.5" />
+          </label>
+          <button id="btn-tap-bpm" title="Tap tempo — click in beat to set BPM">TAP</button>
+          <div class="transport-sep"></div>
+          <button id="btn-snap" class="snap-btn" title="Beat grid snap (click to cycle: off → beat → bar)">
+            SNAP: OFF
+          </button>
+          <button id="btn-metro" class="metro-btn" title="Toggle metronome click track">METRO: OFF</button>
+          <div class="zoom-controls">
+            <button id="btn-zoom-out" title="Zoom out (−)">−</button>
+            <span id="zoom-display">1×</span>
+            <button id="btn-zoom-in" title="Zoom in (+)">＋</button>
+            <button id="btn-zoom-fit" title="Fit all tracks in view">fit</button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Content -->
+      <div id="main-area">
+        <!-- Left: Track Control Strips -->
+        <div id="track-controls">
+          <div id="track-controls-header">
+            <span>TRACKS</span>
+          </div>
+          <div id="track-controls-body"></div>
+        </div>
+
+        <!-- Right: Scrollable Timeline -->
+        <div id="timeline-scroll-wrapper">
+          <canvas id="timeline-canvas"></canvas>
+        </div>
+      </div>
+
+      <!-- Status Bar -->
+      <footer id="status-bar">
+        <span id="status-text">Ready — import audio files to begin.</span>
+        <span id="opfs-indicator" class="badge">OPFS</span>
+      </footer>
+    </div>
+
+    <script type="module" src="js/app.js"></script>
+  </body>
+</html>
