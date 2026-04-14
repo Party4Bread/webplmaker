@@ -189,6 +189,8 @@ let tapPopupTrackId = null;
 let popupTapTimes = [];
 let popupTapTimer = null;
 let tapPopupEl = null;
+let tapPreviewSrc = null;
+let tapPreviewGain = null;
 
 function buildTapPopup() {
   if (tapPopupEl) return;
@@ -200,6 +202,7 @@ function buildTapPopup() {
       <div class="bpm-tap-header">
         <span class="bpm-tap-title">TAP BPM</span>
         <span class="bpm-tap-trackname" id="tap-track-name"></span>
+        <button class="bpm-tap-play" id="tap-play" title="Play / stop track preview">▶</button>
         <button class="bpm-tap-close" id="tap-close">✕</button>
       </div>
 
@@ -230,6 +233,10 @@ function buildTapPopup() {
     if (e.target === el) closeTapBpmPopup();
   });
   el.querySelector("#tap-close").addEventListener("click", closeTapBpmPopup);
+  el.querySelector("#tap-play").addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleTapPreview();
+  });
   el.querySelector("#tap-zone").addEventListener("click", (e) => {
     e.stopPropagation();
     doPopupTap();
@@ -252,10 +259,64 @@ function openTapBpmPopup(trackId) {
 }
 
 function closeTapBpmPopup() {
+  stopTapPreview();
   tapPopupEl?.classList.add("hidden");
   tapPopupTrackId = null;
   clearTimeout(popupTapTimer);
   popupTapTimes = [];
+}
+
+function toggleTapPreview() {
+  if (tapPreviewSrc) {
+    stopTapPreview();
+  } else {
+    startTapPreview();
+  }
+}
+
+function startTapPreview() {
+  stopTapPreview();
+  const track = state.tracks.find((t) => t.id === tapPopupTrackId);
+  if (!track?.audioBuffer) return;
+  Audio.ensureResumed().then(() => {
+    const ctx = Audio.getAudioContext();
+    const src = ctx.createBufferSource();
+    const gain = ctx.createGain();
+    src.buffer = track.audioBuffer;
+    src.loop = true;
+    gain.gain.value = 0.85;
+    src.connect(gain);
+    gain.connect(ctx.destination);
+    src.start();
+    src.onended = () => {
+      tapPreviewSrc = null;
+      tapPreviewGain = null;
+      _updateTapPlayBtn();
+    };
+    tapPreviewSrc = src;
+    tapPreviewGain = gain;
+    _updateTapPlayBtn();
+  });
+}
+
+function stopTapPreview() {
+  if (tapPreviewSrc) {
+    tapPreviewSrc.onended = null;
+    try {
+      tapPreviewSrc.stop();
+    } catch {
+      /* already ended */
+    }
+    tapPreviewGain?.disconnect();
+    tapPreviewSrc = null;
+    tapPreviewGain = null;
+  }
+  _updateTapPlayBtn();
+}
+
+function _updateTapPlayBtn() {
+  const btn = tapPopupEl?.querySelector("#tap-play");
+  if (btn) btn.textContent = tapPreviewSrc ? "⏹" : "▶";
 }
 
 function resetPopupTaps() {

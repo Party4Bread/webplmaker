@@ -531,6 +531,7 @@ function _startPreview() {
 function _stopPreview() {
   _stopMetro();
   if (_prevSrc) {
+    _prevSrc.onended = null; // prevent stale onended from killing the next preview's metronome
     try {
       _prevSrc.stop();
     } catch {
