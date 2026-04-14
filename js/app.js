@@ -533,7 +533,7 @@ function updatePlayheadDisplay() {
       }
     }
   }
-  playheadDisplay.textContent = formatTimeMs(state.playhead);
+  playheadDisplay.textContent = formatBeats(state.playhead, state.masterBPM);
 }
 
 // ── Track management ─────────────────────────────────────────
@@ -992,6 +992,15 @@ function formatTimeMs(sec) {
   const s = Math.floor(sec % 60);
   const ms = Math.floor((sec % 1) * 10);
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}.${ms}`;
+}
+
+/** Format set-time as BAR:BEAT.16th (1-based, 4/4 assumed). */
+function formatBeats(sec, bpm) {
+  const totalBeats = sec * ((bpm || 120) / 60);
+  const bar = Math.floor(totalBeats / 4) + 1;
+  const beat = Math.floor(totalBeats % 4) + 1;
+  const sixteenth = Math.floor((totalBeats % 1) * 4) + 1;
+  return `${String(bar).padStart(3, "0")}:${beat}.${sixteenth}`;
 }
 
 function formatTimeSec(sec) {
