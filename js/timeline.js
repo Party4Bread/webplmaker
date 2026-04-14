@@ -70,7 +70,7 @@ let rafId = null;
 // Created DOM nodes
 let contentDiv = null;
 let rulerCanvas = null;
-let gridCanvas = null;
+// gridCanvas removed — grid is now CSS background (no canvas size limit)
 let tracksContainer = null;
 let bpmLane = null;
 let bpmSvg = null;
@@ -78,7 +78,8 @@ let playheadEl = null;
 
 // Per-track DOM: Map<id, {rowEl, blockEl, waveCanvas, beatSvg, autoLane, autoSvg, labelDiv}>
 const _trackDom = new Map();
-// Waveform canvas cache: Map<id, HTMLCanvasElement>
+// Waveform image cache: Map<id, HTMLImageElement>
+// Stored as <img> (not live canvas) to avoid browser context-count limits.
 const _waveCanvases = new Map();
 
 // Dirty tracking
@@ -118,6 +119,7 @@ export function destroy() {
   document.removeEventListener("pointermove", _onMouseMove);
   document.removeEventListener("pointerup", _onMouseUp);
   document.removeEventListener("pointercancel", _onMouseUp);
+  wrapper?.removeEventListener("scroll", _redrawRuler);
 }
 
 /** Rebuild waveform canvas for a track (call after mute toggle or re-import). */
@@ -159,6 +161,8 @@ function _buildDom() {
   rulerDiv.style.cssText =
     `position:sticky; top:0; z-index:10; height:${RULER_H}px; ` +
     `background:${C.ruler}; overflow:hidden; cursor:col-resize; touch-action:none;`;
+  // Ruler canvas: sized to viewport width only, redrawn on scroll.
+  // Never wider than the screen → no size-limit problem.
   rulerCanvas = document.createElement("canvas");
   rulerCanvas.id = "tl-ruler-canvas";
   rulerCanvas.height = RULER_H;
@@ -167,17 +171,17 @@ function _buildDom() {
   rulerDiv.addEventListener("pointerdown", _onRulerMouseDown);
   contentDiv.appendChild(rulerDiv);
 
-  // ── Grid canvas (behind tracks) ───────────────────────────
-  gridCanvas = document.createElement("canvas");
-  gridCanvas.id = "tl-grid";
-  gridCanvas.style.cssText = `position:absolute; top:${RULER_H}px; left:0; pointer-events:none; z-index:0;`;
-  contentDiv.appendChild(gridCanvas);
+  // Grid: CSS repeating-linear-gradient — infinite width, zero memory.
+  // No canvas element needed; updated via tracksContainer.style in _updateLayout.
 
   // ── Tracks container ──────────────────────────────────────
   tracksContainer = document.createElement("div");
   tracksContainer.id = "tl-tracks";
   tracksContainer.style.cssText = "position:relative; z-index:1;";
   contentDiv.appendChild(tracksContainer);
+
+  // Redraw ruler on scroll (canvas is viewport-wide, must show correct offset)
+  wrapper.addEventListener("scroll", _redrawRuler);
 
   // ── BPM lane ──────────────────────────────────────────────
   bpmLane = document.createElement("div");
@@ -310,6 +314,9 @@ function _getOrBuildWaveCanvas(track) {
 }
 
 function _buildWaveformCanvas(track) {
+  // Draw to a temporary off-DOM canvas, then immediately bake to <img>.
+  // This releases the 2D context right away — avoids the browser's ~16-context
+  // limit regardless of how many tracks are loaded.
   const oc = document.createElement("canvas");
   oc.width = WAVEFORM_W;
   oc.height = TRACK_H;
@@ -328,7 +335,11 @@ function _buildWaveformCanvas(track) {
       c.fillRect(i, mid - amp / 2, 1, amp || 1);
     }
   }
-  return oc;
+
+  // Bake to static image — oc goes out of scope and is GC'd (context freed)
+  const img = document.createElement("img");
+  img.src = oc.toDataURL();
+  return img;
 }
 
 // ── Layout update ─────────────────────────────────────────────
@@ -342,17 +353,13 @@ function _updateLayout() {
   contentDiv.style.width = contentW + "px";
   contentDiv.style.height = RULER_H + tracksH + BPM_H + "px";
 
-  // Tracks container must be at least tracksH tall to cover the grid canvas
   tracksContainer.style.minHeight = tracksH + "px";
 
-  // Ruler
-  rulerCanvas.width = contentW;
-  _drawRuler(contentW);
+  // Ruler — viewport width only, scroll offset applied in _drawRuler
+  _redrawRuler();
 
-  // Grid (only covers tracks area)
-  gridCanvas.width = contentW;
-  gridCanvas.height = tracksH;
-  _drawGrid(contentW, tracksH);
+  // Grid — CSS background, infinite width, no canvas allocation
+  _updateGridCss();
 
   // Track rows
   _ensureTrackRows();
@@ -391,63 +398,70 @@ function _updateLayout() {
   _buildBpmSvg(contentW);
 }
 
-// ── Grid + Ruler (canvas) ─────────────────────────────────────
+// ── Grid (CSS) + Ruler (viewport canvas) ──────────────────────
 
-function _drawGrid(W, H) {
-  const c = gridCanvas.getContext("2d");
-  c.clearRect(0, 0, W, H);
+/** Replace canvas grid with CSS repeating-linear-gradient — scales to any
+ *  timeline length with zero memory cost. */
+function _updateGridCss() {
+  if (!state) return;
   const bpm = state.masterBPM || 120;
-  const beatSec = 60 / bpm;
-  const barSec = beatSec * 4;
-  const barPx = barSec * state.pxPerSec;
-  const beatPx = beatSec * state.pxPerSec;
-  const totalSec = W / state.pxPerSec;
+  const beatPx = (60 / bpm) * state.pxPerSec;
+  const barPx = beatPx * 4;
 
+  const layers = [];
+  // Bar lines (brighter)
   if (barPx >= 2) {
-    c.strokeStyle = "rgba(232,160,32,0.10)";
-    c.lineWidth = 1;
-    for (let t = 0; t < totalSec + barSec; t += barSec) {
-      const x = Math.round(t * state.pxPerSec) + 0.5;
-      c.beginPath();
-      c.moveTo(x, 0);
-      c.lineTo(x, H);
-      c.stroke();
-    }
+    layers.push(
+      `repeating-linear-gradient(90deg,` +
+        `rgba(232,160,32,0.10) 0,rgba(232,160,32,0.10) 1px,` +
+        `transparent 1px,transparent ${barPx}px)`,
+    );
   }
+  // Beat lines (dimmer), drawn under bar lines
   if (beatPx >= 5) {
-    c.strokeStyle = "rgba(255,255,255,0.05)";
-    c.lineWidth = 1;
-    for (let t = 0; t < totalSec + beatSec; t += beatSec) {
-      if (t % barSec < 0.001) continue;
-      const x = Math.round(t * state.pxPerSec) + 0.5;
-      c.beginPath();
-      c.moveTo(x, 0);
-      c.lineTo(x, H);
-      c.stroke();
-    }
+    layers.push(
+      `repeating-linear-gradient(90deg,` +
+        `rgba(255,255,255,0.05) 0,rgba(255,255,255,0.05) 1px,` +
+        `transparent 1px,transparent ${beatPx}px)`,
+    );
   }
+  tracksContainer.style.backgroundImage = layers.join(",");
 }
 
-function _drawRuler(W) {
+/** Redraw ruler using only viewport width + current scroll offset.
+ *  Canvas is always ≤ screen width — never hits the 32k pixel limit. */
+function _redrawRuler() {
+  if (!wrapper || !rulerCanvas) return;
+  const W = wrapper.clientWidth;
+  if (W <= 0) return;
+  rulerCanvas.width = W;
+
+  const scrollOff = wrapper.scrollLeft;
   const c = rulerCanvas.getContext("2d");
   c.clearRect(0, 0, W, RULER_H);
   c.fillStyle = C.ruler;
   c.fillRect(0, 0, W, RULER_H);
 
   const { stepSec } = _gridStep();
+  const startT = scrollOff / state.pxPerSec;
+  const endT = (scrollOff + W) / state.pxPerSec;
+
   c.fillStyle = C.rulerText;
   c.font = "10px monospace";
   c.textBaseline = "middle";
   c.lineWidth = 1;
 
-  for (let t = 0; t * state.pxPerSec < W; t += stepSec) {
-    const x = Math.round(t * state.pxPerSec) + 0.5;
+  // Align loop start to nearest step boundary before startT
+  const firstT = Math.floor(startT / stepSec) * stepSec;
+  for (let t = firstT; t <= endT + stepSec; t += stepSec) {
+    const x = Math.round((t - startT) * state.pxPerSec) + 0.5;
+    if (x < 0 || x > W) continue;
     c.strokeStyle = C.rulerTick;
     c.beginPath();
     c.moveTo(x, RULER_H - 6);
     c.lineTo(x, RULER_H);
     c.stroke();
-    if (x > 20) c.fillText(_formatBeat(t), x + 3, RULER_H / 2);
+    if (x > 4) c.fillText(_formatBeat(t), x + 3, RULER_H / 2);
   }
 }
 
