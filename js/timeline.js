@@ -83,6 +83,7 @@ const _waveCanvases = new Map();
 
 // Dirty tracking
 let _layoutSig = "";
+let _autoEditVersion = 0; // incremented on every automation drag edit → forces SVG re-render
 
 // Drag state
 const drag = {
@@ -494,6 +495,10 @@ function _buildAutoSvg(track, svg, contentW) {
   const points = track.automation ?? [];
   if (!points.length) return;
 
+  // Identify selected point by object identity so it stays correct even when
+  // the point moves past others (sorted display order changes, stored index doesn't).
+  const selectedPt = drag.type === "auto_point" && drag.trackId === track.id ? (points[drag.pointIndex] ?? null) : null;
+
   const sorted = [...points].sort((a, b) => a.time - b.time);
   const toX = (t) => _audioTimeToX(track, t);
   const toY = (v) => Math.round(AUTO_PT_R + (1 - v) * (AUTO_H - AUTO_PT_R * 2));
@@ -534,7 +539,7 @@ function _buildAutoSvg(track, svg, contentW) {
   sorted.forEach((pt, i) => {
     const cx = toX(pt.time);
     const cy = toY(pt.value);
-    const isSelected = drag.type === "auto_point" && drag.trackId === track.id && drag.pointIndex === i;
+    const isSelected = pt === selectedPt;
 
     const circle = _svg("circle");
     circle.setAttribute("cx", cx);
@@ -588,6 +593,9 @@ function _buildBpmSvg(contentW) {
     const line = _appendSvgLine(bpmSvg, 0, y, contentW, y, "rgba(232,160,32,0.35)", 1);
     line.setAttribute("stroke-dasharray", "4 4");
   } else {
+    // Identify selected point by object identity (stable against sort-order changes during drag)
+    const selectedPt = drag.type === "bpm_point" ? (points[drag.pointIndex] ?? null) : null;
+
     const sorted = [...points].sort((a, b) => a.time - b.time);
     const first = sorted[0];
     const last = sorted[sorted.length - 1];
@@ -622,7 +630,7 @@ function _buildBpmSvg(contentW) {
     sorted.forEach((pt, i) => {
       const cx = pt.time * state.pxPerSec;
       const cy = bpmToY(pt.value);
-      const isSelected = drag.type === "bpm_point" && drag.pointIndex === i;
+      const isSelected = pt === selectedPt;
 
       const circle = _svg("circle");
       circle.setAttribute("cx", cx);
@@ -663,7 +671,9 @@ function _stateSignature() {
         (t) =>
           `${t.id}:${t.startTime}:${t.bpm}:${t.beatOffset ?? 0}:${t.muted ? 1 : 0}:${t.color}:${(t.automation ?? []).length}`,
       )
-      .join(",")
+      .join(",") +
+    // Include drag selection + edit version so SVGs re-render during automation drag
+    `|${drag.type}|${drag.trackId ?? ""}|${drag.pointIndex}|${_autoEditVersion}`
   );
 }
 
@@ -739,12 +749,14 @@ function _onAutoMouseDown(e, track) {
     const audioTime = _xToAudioTime(track, x);
     if (audioTime >= 0 && audioTime <= track.duration) {
       const value = _autoYToValue(y, laneY);
-      const newPoints = [...points, { time: audioTime, value }].sort((a, b) => a.time - b.time);
+      const newPt = { time: audioTime, value };
+      const newPoints = [...points, newPt]; // append unsorted — drag.pointIndex = stable last index
       onAutomationEdit(track.id, newPoints);
       drag.type = "auto_point";
       drag.trackId = track.id;
-      drag.pointIndex = newPoints.findIndex((p) => p.time === audioTime && p.value === value);
+      drag.pointIndex = newPoints.indexOf(newPt); // object identity — never -1
       drag.startMouseX = e.clientX;
+      _autoEditVersion++;
     }
   }
 }
@@ -766,11 +778,13 @@ function _onBpmMouseDown(e) {
   } else {
     const time = x / state.pxPerSec;
     const bpm = _yToBpm(y);
-    const newPoints = [...points, { time, value: bpm }].sort((a, b) => a.time - b.time);
+    const newPt = { time, value: bpm };
+    const newPoints = [...points, newPt]; // append unsorted — drag.pointIndex = stable last index
     onBpmAutomationEdit?.(newPoints);
     drag.type = "bpm_point";
-    drag.pointIndex = newPoints.findIndex((p) => p.time === time && p.value === bpm);
+    drag.pointIndex = newPoints.indexOf(newPt); // object identity — never -1
     drag.startMouseX = e.clientX;
+    _autoEditVersion++;
   }
 }
 
@@ -793,17 +807,19 @@ function _onMouseMove(e) {
     const newTime = Math.max(0, Math.min(track.duration, _xToAudioTime(track, x)));
     const newValue = _autoYToValue(y, laneY);
     const newPoints = (track.automation ?? []).map((pt, i) =>
-      i === drag.pointIndex ? { time: newTime, value: newValue } : pt,
+      i === drag.pointIndex ? { ...pt, time: newTime, value: newValue } : pt,
     );
     onAutomationEdit(drag.trackId, newPoints);
+    _autoEditVersion++;
   } else if (drag.type === "bpm_point") {
     const newTime = Math.max(0, x / state.pxPerSec);
     const laneLocalY = y - (RULER_H + state.tracks.length * TRACK_TOTAL + 2);
     const newBpm = _yToBpm(laneLocalY);
     const newPoints = (state.bpmAutomation ?? []).map((pt, i) =>
-      i === drag.pointIndex ? { time: newTime, value: newBpm } : pt,
+      i === drag.pointIndex ? { ...pt, time: newTime, value: newBpm } : pt,
     );
     onBpmAutomationEdit?.(newPoints);
+    _autoEditVersion++;
   }
 }
 
