@@ -35,6 +35,7 @@ let _prevGain = null;
 let _prevStartCtx = 0;
 let _prevStartTrack = 0;
 let _prevPlaying = false;
+let _prevStopTimer = null; // explicit stop timer — never rely on src.onended
 
 // Metronome state
 let _metroOn = true;
@@ -496,11 +497,20 @@ function _togglePreview() {
 
 function _startPreview() {
   if (!_track.audioBuffer || !_audioCtx) return;
+
+  // Ensure AudioContext is running — if suspended, currentTime won't advance
+  // and the metronome scheduler would freeze after the first scheduled beat.
+  if (_audioCtx.state === "suspended") {
+    _audioCtx.resume().then(_startPreview);
+    return;
+  }
+
   _stopPreview();
 
-  // Play from beat 1 for 2 bars
-  const startSec = Math.max(0, _offset);
-  const duration = (60 / _bpm) * 8;
+  // Play from beat 1 for 2 bars (clamped to buffer length)
+  const bufDur = _track.audioBuffer.duration;
+  const startSec = Math.min(Math.max(0, _offset), bufDur - 0.01);
+  const duration = Math.min((60 / _bpm) * 8, bufDur - startSec);
 
   const src = _audioCtx.createBufferSource();
   const gain = _audioCtx.createGain();
@@ -508,12 +518,9 @@ function _startPreview() {
   gain.gain.value = 0.9;
   src.connect(gain);
   gain.connect(_audioCtx.destination);
+  // Do NOT use src.onended — it fires asynchronously after stop() and can
+  // cancel the metronome of a subsequently started preview.
   src.start(_audioCtx.currentTime, startSec, duration);
-  src.onended = () => {
-    _stopMetro();
-    _prevPlaying = false;
-    _updatePreviewBtn();
-  };
 
   _prevSrc = src;
   _prevGain = gain;
@@ -523,15 +530,19 @@ function _startPreview() {
   _updatePreviewBtn();
   _startMetro();
 
+  // Stop after duration using a plain JS timer (immune to audio race conditions)
+  _prevStopTimer = setTimeout(_stopPreview, duration * 1000 + 150);
+
   // Scroll view to show beat 1
   const W = _canvas.width || 600;
   _scrollX = Math.max(0, _offset - W / _pxPerSec / 4);
 }
 
 function _stopPreview() {
+  clearTimeout(_prevStopTimer);
+  _prevStopTimer = null;
   _stopMetro();
   if (_prevSrc) {
-    _prevSrc.onended = null; // prevent stale onended from killing the next preview's metronome
     try {
       _prevSrc.stop();
     } catch {
