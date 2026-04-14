@@ -107,15 +107,17 @@ export function init(wrapperEl, appState, callbacks) {
   onBpmAutomationEdit = callbacks.onBpmAutomationEdit ?? null;
 
   _buildDom();
-  document.addEventListener("mousemove", _onMouseMove);
-  document.addEventListener("mouseup", _onMouseUp);
+  document.addEventListener("pointermove", _onMouseMove);
+  document.addEventListener("pointerup", _onMouseUp);
+  document.addEventListener("pointercancel", _onMouseUp);
   _startRaf();
 }
 
 export function destroy() {
   if (rafId) cancelAnimationFrame(rafId);
-  document.removeEventListener("mousemove", _onMouseMove);
-  document.removeEventListener("mouseup", _onMouseUp);
+  document.removeEventListener("pointermove", _onMouseMove);
+  document.removeEventListener("pointerup", _onMouseUp);
+  document.removeEventListener("pointercancel", _onMouseUp);
 }
 
 /** Rebuild waveform canvas for a track (call after mute toggle or re-import). */
@@ -156,13 +158,13 @@ function _buildDom() {
   rulerDiv.id = "tl-ruler";
   rulerDiv.style.cssText =
     `position:sticky; top:0; z-index:10; height:${RULER_H}px; ` +
-    `background:${C.ruler}; overflow:hidden; cursor:col-resize;`;
+    `background:${C.ruler}; overflow:hidden; cursor:col-resize; touch-action:none;`;
   rulerCanvas = document.createElement("canvas");
   rulerCanvas.id = "tl-ruler-canvas";
   rulerCanvas.height = RULER_H;
   rulerCanvas.style.cssText = "display:block; position:absolute; top:0; left:0;";
   rulerDiv.appendChild(rulerCanvas);
-  rulerDiv.addEventListener("mousedown", _onRulerMouseDown);
+  rulerDiv.addEventListener("pointerdown", _onRulerMouseDown);
   contentDiv.appendChild(rulerDiv);
 
   // ── Grid canvas (behind tracks) ───────────────────────────
@@ -180,7 +182,7 @@ function _buildDom() {
   // ── BPM lane ──────────────────────────────────────────────
   bpmLane = document.createElement("div");
   bpmLane.id = "tl-bpm-lane";
-  bpmLane.style.cssText = `position:relative; height:${BPM_H}px; background:#1a1a28; border-top:2px solid #111; overflow:visible;`;
+  bpmLane.style.cssText = `position:relative; height:${BPM_H}px; background:#1a1a28; border-top:2px solid #111; overflow:visible; touch-action:none;`;
   bpmSvg = _svg("svg");
   bpmSvg.id = "tl-bpm-svg";
   bpmSvg.setAttribute("height", BPM_H);
@@ -194,7 +196,7 @@ function _buildDom() {
     `line-height:${BPM_H}px; z-index:1;`;
   bpmLabel.textContent = "BPM AUTO";
   bpmLane.appendChild(bpmLabel);
-  bpmLane.addEventListener("mousedown", _onBpmMouseDown);
+  bpmLane.addEventListener("pointerdown", _onBpmMouseDown);
   bpmLane.addEventListener("contextmenu", _onBpmContextMenu);
   contentDiv.appendChild(bpmLane);
 
@@ -253,9 +255,9 @@ function _addTrackRow(track) {
   const blockEl = document.createElement("div");
   blockEl.className = "tl-block";
   blockEl.style.cssText =
-    `position:absolute; top:0; height:${TRACK_H}px; overflow:hidden; cursor:grab; ` +
+    `position:absolute; top:0; height:${TRACK_H}px; overflow:hidden; cursor:grab; touch-action:none; ` +
     `border-left:3px solid ${track.color};`;
-  blockEl.addEventListener("mousedown", (e) => _onTrackMouseDown(e, track));
+  blockEl.addEventListener("pointerdown", (e) => _onTrackMouseDown(e, track));
   blockEl.addEventListener("contextmenu", (e) => _onTrackContextMenu(e, track));
 
   // Waveform canvas (fixed-resolution, CSS-stretched)
@@ -284,13 +286,13 @@ function _addTrackRow(track) {
   autoLane.className = "tl-auto-lane";
   autoLane.style.cssText =
     `position:absolute; left:0; right:0; top:${TRACK_H + TRACK_GAP}px; ` +
-    `height:${AUTO_H}px; background:${C.autoLane}; overflow:visible; cursor:crosshair;`;
+    `height:${AUTO_H}px; background:${C.autoLane}; overflow:visible; cursor:crosshair; touch-action:none;`;
 
   const autoSvg = _svg("svg");
   autoSvg.setAttribute("class", "tl-auto-svg");
   autoSvg.setAttribute("height", AUTO_H);
   autoSvg.style.cssText = "position:absolute; top:0; left:0; overflow:visible;";
-  autoSvg.addEventListener("mousedown", (e) => _onAutoMouseDown(e, track));
+  autoSvg.addEventListener("pointerdown", (e) => _onAutoMouseDown(e, track));
   autoSvg.addEventListener("contextmenu", (e) => _onAutoContextMenu(e, track));
   autoLane.appendChild(autoSvg);
   rowEl.appendChild(autoLane);
@@ -710,16 +712,18 @@ function _contentY(clientY) {
 }
 
 function _onRulerMouseDown(e) {
-  if (e.button !== 0) return;
+  if (e.pointerType === "mouse" && e.button !== 0) return;
   e.preventDefault();
+  e.target.setPointerCapture(e.pointerId);
   drag.type = "playhead";
   onSeek(Math.max(0, _contentX(e.clientX) / state.pxPerSec));
 }
 
 function _onTrackMouseDown(e, track) {
-  if (e.button !== 0) return;
+  if (e.pointerType === "mouse" && e.button !== 0) return;
   e.preventDefault();
   e.stopPropagation();
+  e.target.setPointerCapture(e.pointerId);
   drag.type = "track";
   drag.trackId = track.id;
   drag.startValue = track.startTime;
@@ -729,9 +733,10 @@ function _onTrackMouseDown(e, track) {
 }
 
 function _onAutoMouseDown(e, track) {
-  if (e.button !== 0) return;
+  if (e.pointerType === "mouse" && e.button !== 0) return;
   e.preventDefault();
   e.stopPropagation();
+  e.target.setPointerCapture(e.pointerId);
   const x = _contentX(e.clientX);
   const y = _contentY(e.clientY);
   const idx = state.tracks.findIndex((t) => t.id === track.id);
@@ -762,8 +767,9 @@ function _onAutoMouseDown(e, track) {
 }
 
 function _onBpmMouseDown(e) {
-  if (e.button !== 0) return;
+  if (e.pointerType === "mouse" && e.button !== 0) return;
   e.preventDefault();
+  e.target.setPointerCapture(e.pointerId);
   const x = _contentX(e.clientX);
   const y = _contentY(e.clientY) - (RULER_H + state.tracks.length * TRACK_TOTAL + 2);
 

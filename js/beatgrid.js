@@ -202,11 +202,12 @@ function _build() {
     else if (_prevPlaying) _startMetro();
   });
 
-  // Canvas mouse
-  _canvas.addEventListener("mousedown", _onMouseDown);
-  _canvas.addEventListener("mousemove", _onMouseMove);
-  _canvas.addEventListener("mouseup", () => (_drag = false));
-  _canvas.addEventListener("mouseleave", () => (_drag = false));
+  // Canvas — pointer events cover mouse, touch, and stylus
+  _canvas.style.touchAction = "none"; // prevent scroll hijack on touch
+  _canvas.addEventListener("pointerdown", _onMouseDown);
+  _canvas.addEventListener("pointermove", _onMouseMove);
+  _canvas.addEventListener("pointerup", () => (_drag = false));
+  _canvas.addEventListener("pointercancel", () => (_drag = false));
   _canvas.addEventListener("wheel", _onWheel, { passive: false });
 
   // Keyboard — attached once, guarded inside handler
@@ -383,8 +384,9 @@ function _drawTimeRuler(W, H) {
 // ── Interaction ───────────────────────────────────────────────
 
 function _onMouseDown(e) {
-  if (e.button !== 0) return;
+  if (e.pointerType === "mouse" && e.button !== 0) return;
   _drag = true;
+  e.currentTarget.setPointerCapture(e.pointerId); // keep events even if pointer leaves canvas
   _setOffsetFromX(e.offsetX);
 }
 

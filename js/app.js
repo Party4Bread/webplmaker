@@ -237,7 +237,7 @@ function buildTapPopup() {
     e.stopPropagation();
     toggleTapPreview();
   });
-  el.querySelector("#tap-zone").addEventListener("click", (e) => {
+  el.querySelector("#tap-zone").addEventListener("pointerdown", (e) => {
     e.stopPropagation();
     doPopupTap();
   });
@@ -835,7 +835,7 @@ function renderTrackControls() {
 
     // Volume slider — push undo on mousedown, not every input tick
     const volSlider = strip.querySelector(".track-volume-slider");
-    volSlider.addEventListener("mousedown", () => pushUndo());
+    volSlider.addEventListener("pointerdown", () => pushUndo());
     volSlider.addEventListener("input", (ev) => setTrackVolume(track.id, parseFloat(ev.target.value)));
 
     strip.querySelector(".btn-mute").addEventListener("click", () => toggleMute(track.id));

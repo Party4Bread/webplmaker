@@ -400,6 +400,9 @@ button:active {
   overflow-y: auto;
   background: var(--bg0);
   position: relative;
+  /* Allow scroll gestures on the wrapper itself; individual interactive
+     elements override this with touch-action:none to capture drags */
+  touch-action: pan-x pan-y;
 }
 #timeline-scroll-wrapper::-webkit-scrollbar {
   height: 8px;
