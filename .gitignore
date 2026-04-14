@@ -1,1 +1,47 @@
+# ── Dev tools ──────────────────────────────────────────────────
 .playwright-mcp/
+.claude/
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+
+# ── OS / editor ────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# ── Screenshots / test captures ────────────────────────────────
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+
+# ── Audio files (never commit personal music) ──────────────────
+*.mp3
+*.flac
+*.m4a
+*.wav
+*.aac
+*.ogg
+*.opus
+*.aiff
+
+# ── Local demo / music symlinks or folders ─────────────────────
+demosong
+demosong/
+
+# ── Metadata / scraper output ──────────────────────────────────
+sc_*.txt
+sc_*.json
+spotify_*.json
+*.json
+!package.json
+
+# ── Build / cache ──────────────────────────────────────────────
+dist/
+.cache/
+*.log
