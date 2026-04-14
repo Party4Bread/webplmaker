@@ -682,7 +682,7 @@ function _startRaf() {
 
     // Playhead — only thing that moves every frame
     if (playheadEl && state) {
-      playheadEl.style.left = Math.round(_beatToPx(state.playhead)) + "px";
+      playheadEl.style.left = Math.round(state.playhead * state.pxPerSec) + "px";
     }
 
     rafId = requestAnimationFrame(frame);
@@ -693,10 +693,10 @@ function _startRaf() {
 // ── Interactions ──────────────────────────────────────────────
 
 function _contentX(clientX) {
-  return clientX - contentDiv.getBoundingClientRect().left + wrapper.scrollLeft;
+  return clientX - wrapper.getBoundingClientRect().left + wrapper.scrollLeft;
 }
 function _contentY(clientY) {
-  return clientY - contentDiv.getBoundingClientRect().top + wrapper.scrollTop;
+  return clientY - wrapper.getBoundingClientRect().top + wrapper.scrollTop;
 }
 
 function _onRulerMouseDown(e) {
