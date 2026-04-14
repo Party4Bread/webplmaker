@@ -407,9 +407,26 @@ button:active {
   border-radius: 4px;
 }
 
-#timeline-canvas {
-  display: block;
-  cursor: crosshair;
+/* ── Hybrid timeline DOM elements ──────────────────────────── */
+#tl-content {
+  background: #1a1a1a;
+}
+
+#tl-ruler {
+  user-select: none;
+}
+
+.tl-block {
+  box-sizing: border-box;
+  user-select: none;
+}
+
+.tl-block:active {
+  cursor: grabbing !important;
+}
+
+.tl-auto-lane {
+  user-select: none;
 }
 
 /* ── Status Bar ────────────────────────────────────────────── */
