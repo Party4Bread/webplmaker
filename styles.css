@@ -535,6 +535,19 @@ button:active {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.bpm-tap-play {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--accent);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 7px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.bpm-tap-play:hover {
+  background: rgba(232, 160, 32, 0.15);
+}
 .bpm-tap-close {
   background: none;
   border: none;
