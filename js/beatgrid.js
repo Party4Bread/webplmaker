@@ -105,7 +105,7 @@ function _build() {
       <div class="bgm-controls">
         <label class="bgm-ctrl-group">
           <span>BPM</span>
-          <input class="bgm-bpm" type="number" min="40" max="300" step="0.5">
+          <input class="bgm-bpm" type="number" min="60" max="280" step="0.5">
         </label>
         <label class="bgm-ctrl-group">
           <span>Beat 1 offset</span>
@@ -162,11 +162,11 @@ function _build() {
   const bpmInput = _el.querySelector(".bgm-bpm");
   bpmInput.addEventListener("input", () => {
     const v = parseFloat(bpmInput.value);
-    if (v >= 40 && v <= 300) _bpm = v;
+    if (v >= 60 && v <= 280) _bpm = v;
   });
   bpmInput.addEventListener("change", () => {
     const v = parseFloat(bpmInput.value) || 120;
-    _bpm = Math.min(300, Math.max(40, v));
+    _bpm = Math.min(280, Math.max(60, v));
     _syncInputs();
   });
 

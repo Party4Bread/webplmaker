@@ -175,7 +175,7 @@ function handleTapBpm() {
   }
   const avgMs = intervals.reduce((a, b) => a + b, 0) / intervals.length;
   const bpm = Math.round(60000 / avgMs);
-  const clamped = Math.min(300, Math.max(40, bpm));
+  const clamped = Math.min(280, Math.max(60, bpm));
 
   masterBpm.value = clamped;
   state.masterBPM = clamped;
@@ -375,13 +375,9 @@ function doPopupTap() {
   renderPopupVariants(bpm);
 }
 
-/** Snap raw BPM to musical half/double if within 5%. */
+/** Clamp raw BPM to the supported range — no forced half/double snap. */
 function snapBpm(raw) {
-  const candidates = [raw, raw * 2, raw / 2, raw * 4, raw / 4].filter((b) => b >= 40 && b <= 300);
-  // Prefer the range 90–180 when possible
-  const inRange = candidates.filter((b) => b >= 90 && b <= 180);
-  const best = (inRange.length ? inRange : candidates)[0];
-  return Math.round(best);
+  return Math.round(Math.min(280, Math.max(60, raw)));
 }
 
 function renderPopupVariants(bpm) {
@@ -396,7 +392,7 @@ function renderPopupVariants(bpm) {
     { label: "½", value: Math.round(bpm / 2) },
     { label: "1×", value: Math.round(bpm), current: true },
     { label: "2×", value: Math.round(bpm * 2) },
-  ].filter((v) => v.value >= 40 && v.value <= 300);
+  ].filter((v) => v.value >= 60 && v.value <= 280);
 
   el.innerHTML = variants
     .map(
@@ -797,7 +793,7 @@ function renderTrackControls() {
         <div class="track-strip-name" title="${track.name}">${track.name}</div>
         <div class="track-bpm-row">
           <span>BPM</span>
-          <input class="track-bpm-input" type="number" min="40" max="300" step="1"
+          <input class="track-bpm-input" type="number" min="60" max="280" step="1"
             value="${track.bpm ?? 120}" title="Track BPM (editable)">
           <button class="btn-tap-track" title="Tap tempo for this track">TAP</button>
           <button class="btn-beat-grid" title="Open beat grid editor">GRID</button>
@@ -818,7 +814,7 @@ function renderTrackControls() {
     // BPM text input
     const bpmInput = strip.querySelector(".track-bpm-input");
     bpmInput.addEventListener("change", (ev) => {
-      const val = Math.round(Math.min(300, Math.max(40, parseFloat(ev.target.value) || 120)));
+      const val = Math.round(Math.min(280, Math.max(60, parseFloat(ev.target.value) || 120)));
       ev.target.value = val;
       setTrackBpm(track.id, val);
     });
